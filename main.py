@@ -3,8 +3,8 @@ import sys, math, random
 import pygame
 from pygame.locals import *
 
-from character import Player, Enemy
-from collision import collide
+from role import Player, Enemy, Ship
+from act import collide, move_lasers
 
 pygame.init()
 
@@ -33,15 +33,34 @@ moving_up = False
 moving_down = False
 
 enemies = []
+lasers = {}
 wave_len = 0
 lvl = 0
 lost = False
 lost_count = 0
+cool_down = False
 fps = 60
 
 run = True
 
 while run:
+
+	pygame.display.update()
+	clock.tick(fps)
+
+	if player.lives <= 0:
+		lost = True
+		lost_count += 1
+
+	if lost:
+		lost_label = lost_font.render('You lost!!', 1, (255, 255, 255))
+		screen.blit(lost_label, (WINDOW_SIZE[0]/2 - lost_label.get_width()/2, WINDOW_SIZE[1]/2))
+
+	if lost:
+		if lost_count > fps * 3:
+			run = False
+		else:
+			continue
 
 	if len(enemies) == 0:
 		lvl += 1
@@ -65,12 +84,17 @@ while run:
 		player.y -= 4
 	if moving_down and player.y<(WINDOW_SIZE[1]-player.get_height()):  # move down
 		player.y += 4
+	if cool_down:
+		if player.cool_down <= 0:
+			cool_down = False
+		else:
+			player.cool_down -= 1
 
 	for event in pygame.event.get():
 		if event.type == QUIT:
-			#pygame.quit()
-			#sys.exit()
 			run = False
+			pygame.quit()
+			sys.exit()
 
 		if event.type == KEYDOWN:
 			if event.key == K_RIGHT:
@@ -82,7 +106,10 @@ while run:
 			if event.key == K_DOWN:
 				moving_down = True
 			if event.key == K_SPACE:
-				player.shoot()
+				if not cool_down:
+					player.shoot()
+					cool_down = True
+					player.cool_down = fps * 0.2
 
 		if event.type == KEYUP:
 			if event.key == K_RIGHT:
@@ -96,34 +123,18 @@ while run:
 
 	for enemy in enemies[:]:
 		enemy.move()
+		if enemy.y > 10:
+			enemy.shoot()
 		if enemy.y >= WINDOW_SIZE[1]-enemy.get_height():
 			enemies.remove(enemy)
 			player.lives -= 1
 		elif collide(enemy, player):
 			enemies.remove(enemy)
-			player.lives -= 1
+			player.lives -= 1 
 
 	for enemy in enemies:
 		enemy.draw(screen)
 
-	player.move_lasers(enemies)
+	move_lasers(Ship.lasers, player, enemies, WINDOW_SIZE[1])
 
 	player.draw(screen)
-
-	if player.lives <= 0:
-		lost = True
-		lost_count += 1
-
-	if lost:
-		lost_label = lost_font.render('You lost!!', 1, (255, 255, 255))
-		screen.blit(lost_label, (WINDOW_SIZE[0]/2 - lost_label.get_width()/2, WINDOW_SIZE[1]/2))
-
-	if lost:
-		if lost_count > fps * 3:
-			run = False
-		else:
-			continue
-
-			
-	pygame.display.update()
-	clock.tick(fps)
