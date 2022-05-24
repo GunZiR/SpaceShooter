@@ -1,3 +1,3 @@
 # SpaceShooter
 Just a game from pygame
-Run main.py to play
+Run game.py to play
